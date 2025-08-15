@@ -53,9 +53,7 @@ const PatientSchema = new Schema<PatientDocument>({
   timestamps: true
 });
 
-// Index for faster searches
-PatientSchema.index({ blockchainId: 1 });
-PatientSchema.index({ email: 1 });
-PatientSchema.index({ googleId: 1 });
+// Additional indexes (unique indexes are already created by schema definition)
+// blockchainId, email, and googleId already have unique indexes from schema
 
 export const Patient = mongoose.model<PatientDocument>('Patient', PatientSchema);
