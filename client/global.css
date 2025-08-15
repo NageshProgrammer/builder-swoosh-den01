@@ -54,6 +54,21 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Healthcare Theme Colors */
+    --healthcare-primary: 210 100% 56%;     /* Medical Blue #0088FF */
+    --healthcare-secondary: 168 100% 42%;   /* Medical Teal #00D4AA */
+    --healthcare-accent: 201 96% 32%;       /* Deep Blue #0A4D68 */
+    --healthcare-success: 142 71% 45%;      /* Medical Green #22C55E */
+    --healthcare-warning: 45 93% 47%;       /* Amber #F59E0B */
+    --healthcare-error: 0 84% 60%;          /* Medical Red #EF4444 */
+
+    /* Medical Color Palette */
+    --medical-blue: 210 100% 56%;           /* Primary Medical Blue */
+    --medical-green: 142 71% 45%;           /* Success Green */
+    --medical-teal: 168 100% 42%;           /* Accent Teal */
+    --medical-navy: 201 96% 32%;            /* Deep Navy */
+    --medical-light: 210 40% 98%;           /* Light Blue/White */
   }
 
   .dark {
@@ -92,6 +107,21 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Healthcare Theme Colors - Dark Mode */
+    --healthcare-primary: 210 100% 65%;     /* Lighter Medical Blue */
+    --healthcare-secondary: 168 100% 50%;   /* Lighter Medical Teal */
+    --healthcare-accent: 201 96% 45%;       /* Lighter Deep Blue */
+    --healthcare-success: 142 71% 55%;      /* Lighter Medical Green */
+    --healthcare-warning: 45 93% 60%;       /* Lighter Amber */
+    --healthcare-error: 0 84% 70%;          /* Lighter Medical Red */
+
+    /* Medical Color Palette - Dark Mode */
+    --medical-blue: 210 100% 65%;           /* Lighter Primary Medical Blue */
+    --medical-green: 142 71% 55%;           /* Lighter Success Green */
+    --medical-teal: 168 100% 50%;           /* Lighter Accent Teal */
+    --medical-navy: 201 96% 45%;            /* Lighter Deep Navy */
+    --medical-light: 222.2 84% 4.9%;        /* Dark Background */
   }
 }
 
