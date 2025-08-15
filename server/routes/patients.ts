@@ -1,14 +1,20 @@
 import { RequestHandler } from "express";
+import mongoose from 'mongoose';
 import { Patient } from '../models/Patient';
 import { MedicalRecord } from '../models/MedicalRecord';
 import { InsuranceInfo } from '../models/Insurance';
 import { BlockchainRecord, AuditLog } from '../models/Security';
-import { 
-  PatientSearchRequest, 
+import {
+  PatientSearchRequest,
   PatientSearchResponse,
   RecordUpdateRequest,
   RecordUpdateResponse
 } from '@shared/api';
+import {
+  findPatientByBlockchainId,
+  findMedicalRecordsByPatientId,
+  findInsuranceByPatientId
+} from '../services/mockData';
 import crypto from 'crypto';
 
 // Search patient by blockchain ID
@@ -16,8 +22,17 @@ export const handlePatientSearch: RequestHandler = async (req, res) => {
   try {
     const { blockchainId } = req.body as PatientSearchRequest;
 
-    const patient = await Patient.findOne({ blockchainId });
-    
+    let patient;
+
+    if (mongoose.connection.readyState === 1) {
+      // Database connected
+      patient = await Patient.findOne({ blockchainId });
+    } else {
+      // Use mock data
+      console.log('🔄 Using mock data for patient search');
+      patient = findPatientByBlockchainId(blockchainId);
+    }
+
     if (!patient) {
       const response: PatientSearchResponse = {
         success: false,
@@ -26,21 +41,23 @@ export const handlePatientSearch: RequestHandler = async (req, res) => {
       return res.status(404).json(response);
     }
 
-    // Log audit trail
-    const auditLog = new AuditLog({
-      action: 'Patient Search',
-      performedBy: req.user?.userId || 'unknown',
-      performedByType: req.user?.userType || 'unknown',
-      patientId: patient._id!.toString(),
-      details: { blockchainId },
-      ipAddress: req.ip || 'unknown',
-      timestamp: new Date().toISOString()
-    });
-    await auditLog.save();
+    if (mongoose.connection.readyState === 1) {
+      // Log audit trail only if database is connected
+      const auditLog = new AuditLog({
+        action: 'Patient Search',
+        performedBy: req.user?.userId || 'unknown',
+        performedByType: req.user?.userType || 'unknown',
+        patientId: patient._id!.toString(),
+        details: { blockchainId },
+        ipAddress: req.ip || 'unknown',
+        timestamp: new Date().toISOString()
+      });
+      await auditLog.save();
+    }
 
     const response: PatientSearchResponse = {
       success: true,
-      patient: patient.toObject()
+      patient: patient
     };
 
     res.json(response);
@@ -59,19 +76,28 @@ export const handleGetMedicalRecords: RequestHandler = async (req, res) => {
   try {
     const { patientId } = req.params;
 
-    const records = await MedicalRecord.find({ patientId }).sort({ date: -1 });
+    let records;
 
-    // Log audit trail
-    const auditLog = new AuditLog({
-      action: 'Medical Records Access',
-      performedBy: req.user?.userId || 'unknown',
-      performedByType: req.user?.userType || 'unknown',
-      patientId,
-      details: { recordCount: records.length },
-      ipAddress: req.ip || 'unknown',
-      timestamp: new Date().toISOString()
-    });
-    await auditLog.save();
+    if (mongoose.connection.readyState === 1) {
+      // Database connected
+      records = await MedicalRecord.find({ patientId }).sort({ date: -1 });
+
+      // Log audit trail
+      const auditLog = new AuditLog({
+        action: 'Medical Records Access',
+        performedBy: req.user?.userId || 'unknown',
+        performedByType: req.user?.userType || 'unknown',
+        patientId,
+        details: { recordCount: records.length },
+        ipAddress: req.ip || 'unknown',
+        timestamp: new Date().toISOString()
+      });
+      await auditLog.save();
+    } else {
+      // Use mock data
+      console.log('🔄 Using mock data for medical records');
+      records = findMedicalRecordsByPatientId(patientId);
+    }
 
     res.json({
       success: true,
@@ -91,19 +117,28 @@ export const handleGetInsuranceInfo: RequestHandler = async (req, res) => {
   try {
     const { patientId } = req.params;
 
-    const insurance = await InsuranceInfo.findOne({ patientId });
+    let insurance;
 
-    // Log audit trail
-    const auditLog = new AuditLog({
-      action: 'Insurance Info Access',
-      performedBy: req.user?.userId || 'unknown',
-      performedByType: req.user?.userType || 'unknown',
-      patientId,
-      details: { hasInsurance: !!insurance },
-      ipAddress: req.ip || 'unknown',
-      timestamp: new Date().toISOString()
-    });
-    await auditLog.save();
+    if (mongoose.connection.readyState === 1) {
+      // Database connected
+      insurance = await InsuranceInfo.findOne({ patientId });
+
+      // Log audit trail
+      const auditLog = new AuditLog({
+        action: 'Insurance Info Access',
+        performedBy: req.user?.userId || 'unknown',
+        performedByType: req.user?.userType || 'unknown',
+        patientId,
+        details: { hasInsurance: !!insurance },
+        ipAddress: req.ip || 'unknown',
+        timestamp: new Date().toISOString()
+      });
+      await auditLog.save();
+    } else {
+      // Use mock data
+      console.log('🔄 Using mock data for insurance info');
+      insurance = findInsuranceByPatientId(patientId);
+    }
 
     res.json({
       success: true,
