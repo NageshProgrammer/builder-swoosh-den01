@@ -177,17 +177,11 @@ const ClaimSchema = new Schema<ClaimDocument>({
   timestamps: true
 });
 
-// Indexes
-InsuranceCompanySchema.index({ registrationNumber: 1 });
-InsuranceCompanySchema.index({ email: 1 });
-
+// Additional indexes (unique indexes are already created by schema definition)
 InsuranceStaffSchema.index({ companyId: 1 });
-InsuranceStaffSchema.index({ phone: 1 });
-InsuranceStaffSchema.index({ employeeId: 1 });
 InsuranceStaffSchema.index({ isActive: 1 });
 
 InsuranceInfoSchema.index({ patientId: 1 });
-InsuranceInfoSchema.index({ policyNumber: 1 });
 InsuranceInfoSchema.index({ status: 1 });
 
 ClaimSchema.index({ patientId: 1 });
