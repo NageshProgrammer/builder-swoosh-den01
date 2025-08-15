@@ -4,6 +4,7 @@ import cors from "cors";
 import { connectDB } from "./config/database";
 import { seedDatabase } from "./utils/seedData";
 import { handleDemo } from "./routes/demo";
+import { handleDatabaseTest } from "./routes/test";
 import {
   handleGoogleLogin,
   handleStaffLogin,
@@ -46,6 +47,7 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+  app.get("/api/test-db", handleDatabaseTest);
 
   // Authentication routes
   app.post("/api/auth/google-login", handleGoogleLogin);
