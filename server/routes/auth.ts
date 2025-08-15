@@ -1,19 +1,25 @@
 import { RequestHandler } from "express";
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { Patient } from '../models/Patient';
 import { HospitalStaff } from '../models/Hospital';
 import { InsuranceStaff } from '../models/Insurance';
 import { OTPRequest, AuditLog } from '../models/Security';
-import { 
-  GoogleLoginRequest, 
-  GoogleLoginResponse, 
-  StaffLoginRequest, 
+import {
+  GoogleLoginRequest,
+  GoogleLoginResponse,
+  StaffLoginRequest,
   StaffLoginResponse,
   OTPSendRequest,
   OTPSendResponse,
   OTPVerifyRequest,
   OTPVerifyResponse
 } from '@shared/api';
+import {
+  mockPatients,
+  findHospitalStaffByPhone,
+  findInsuranceStaffByPhone
+} from '../services/mockData';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -34,7 +40,7 @@ const generateOTP = (): string => {
 export const handleGoogleLogin: RequestHandler = async (req, res) => {
   try {
     const { googleToken } = req.body as GoogleLoginRequest;
-    
+
     // In a real implementation, you would verify the Google token here
     // For demo purposes, we'll simulate with mock data
     const mockGoogleData = {
@@ -43,43 +49,53 @@ export const handleGoogleLogin: RequestHandler = async (req, res) => {
       name: 'Rajesh Kumar'
     };
 
-    let patient = await Patient.findOne({ googleId: mockGoogleData.googleId });
-    
-    if (!patient) {
-      // Create new patient
-      const blockchainId = generateBlockchainId();
-      patient = new Patient({
-        blockchainId,
-        googleId: mockGoogleData.googleId,
-        name: mockGoogleData.name,
-        email: mockGoogleData.email,
-        phone: '+91 98765 43210', // Would come from Google profile or be requested
-        dateOfBirth: '15-03-1985',
-        bloodGroup: 'O+',
-        address: '123 MG Road, Bangalore, Karnataka 560001',
-        emergencyContact: '+91 98765 43211'
-      });
-      await patient.save();
+    let patient;
 
-      // Log audit trail
-      const auditLog = new AuditLog({
-        action: 'Patient Registration',
-        performedBy: patient._id!.toString(),
-        performedByType: 'patient',
-        patientId: patient._id!.toString(),
-        details: { method: 'Google OAuth' },
-        ipAddress: req.ip || 'unknown',
-        timestamp: new Date().toISOString()
-      });
-      await auditLog.save();
+    // Check if database is connected
+    if (mongoose.connection.readyState === 1) {
+      // Database connected - use real data
+      patient = await Patient.findOne({ googleId: mockGoogleData.googleId });
+
+      if (!patient) {
+        // Create new patient
+        const blockchainId = generateBlockchainId();
+        patient = new Patient({
+          blockchainId,
+          googleId: mockGoogleData.googleId,
+          name: mockGoogleData.name,
+          email: mockGoogleData.email,
+          phone: '+91 98765 43210',
+          dateOfBirth: '15-03-1985',
+          bloodGroup: 'O+',
+          address: '123 MG Road, Bangalore, Karnataka 560001',
+          emergencyContact: '+91 98765 43211'
+        });
+        await patient.save();
+
+        // Log audit trail
+        const auditLog = new AuditLog({
+          action: 'Patient Registration',
+          performedBy: patient._id!.toString(),
+          performedByType: 'patient',
+          patientId: patient._id!.toString(),
+          details: { method: 'Google OAuth' },
+          ipAddress: req.ip || 'unknown',
+          timestamp: new Date().toISOString()
+        });
+        await auditLog.save();
+      }
+    } else {
+      // Database not connected - use mock data
+      console.log('🔄 Using mock data for patient login');
+      patient = mockPatients[0]; // Use first mock patient
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        userId: patient._id, 
+      {
+        userId: patient._id || patient.blockchainId,
         userType: 'patient',
-        blockchainId: patient.blockchainId 
+        blockchainId: patient.blockchainId
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -88,7 +104,7 @@ export const handleGoogleLogin: RequestHandler = async (req, res) => {
     const response: GoogleLoginResponse = {
       success: true,
       message: 'Login successful',
-      patient: patient.toObject(),
+      patient: patient,
       token
     };
 
@@ -110,10 +126,22 @@ export const handleStaffLogin: RequestHandler = async (req, res) => {
 
     // Find staff member
     let staff;
-    if (userType === 'hospital') {
-      staff = await HospitalStaff.findOne({ phone, isActive: true });
+
+    if (mongoose.connection.readyState === 1) {
+      // Database connected - use real data
+      if (userType === 'hospital') {
+        staff = await HospitalStaff.findOne({ phone, isActive: true });
+      } else {
+        staff = await InsuranceStaff.findOne({ phone, isActive: true });
+      }
     } else {
-      staff = await InsuranceStaff.findOne({ phone, isActive: true });
+      // Database not connected - use mock data
+      console.log('🔄 Using mock data for staff login');
+      if (userType === 'hospital') {
+        staff = findHospitalStaffByPhone(phone);
+      } else {
+        staff = findInsuranceStaffByPhone(phone);
+      }
     }
 
     if (!staff) {
@@ -124,26 +152,30 @@ export const handleStaffLogin: RequestHandler = async (req, res) => {
       return res.status(404).json(response);
     }
 
-    // Generate and save OTP
+    // Generate OTP
     const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
+    const otpId = Date.now().toString(); // Simple ID for mock mode
 
-    const otpRequest = new OTPRequest({
-      contact: phone,
-      otp,
-      purpose: 'staff_login',
-      expiresAt,
-      requestedBy: staff._id!.toString()
-    });
-    await otpRequest.save();
+    if (mongoose.connection.readyState === 1) {
+      // Save to database
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+      const otpRequest = new OTPRequest({
+        contact: phone,
+        otp,
+        purpose: 'staff_login',
+        expiresAt,
+        requestedBy: staff._id!.toString()
+      });
+      await otpRequest.save();
+    }
 
     // In a real implementation, send SMS via Twilio/Firebase
-    console.log(`OTP for ${phone}: ${otp}`);
+    console.log(`🔐 OTP for ${phone}: ${otp}`);
 
     const response: StaffLoginResponse = {
       success: true,
       message: 'OTP sent successfully',
-      otpId: otpRequest._id!.toString()
+      otpId: mongoose.connection.readyState === 1 ? undefined : otpId
     };
 
     res.json(response);
@@ -213,75 +245,103 @@ export const handleVerifyOTP: RequestHandler = async (req, res) => {
   try {
     const { otpId, otp } = req.body as OTPVerifyRequest;
 
-    const otpRequest = await OTPRequest.findById(otpId);
-    
-    if (!otpRequest) {
-      const response: OTPVerifyResponse = {
-        success: false,
-        message: 'Invalid OTP request'
-      };
-      return res.status(404).json(response);
+    let otpRequest;
+
+    if (mongoose.connection.readyState === 1) {
+      // Database connected
+      otpRequest = await OTPRequest.findById(otpId);
+
+      if (!otpRequest) {
+        const response: OTPVerifyResponse = {
+          success: false,
+          message: 'Invalid OTP request'
+        };
+        return res.status(404).json(response);
+      }
+
+      if (otpRequest.verified) {
+        const response: OTPVerifyResponse = {
+          success: false,
+          message: 'OTP already used'
+        };
+        return res.status(400).json(response);
+      }
+
+      if (new Date() > new Date(otpRequest.expiresAt)) {
+        const response: OTPVerifyResponse = {
+          success: false,
+          message: 'OTP expired'
+        };
+        return res.status(400).json(response);
+      }
+
+      if (otpRequest.otp !== otp) {
+        const response: OTPVerifyResponse = {
+          success: false,
+          message: 'Invalid OTP'
+        };
+        return res.status(400).json(response);
+      }
+
+      // Mark OTP as verified
+      otpRequest.verified = true;
+      await otpRequest.save();
+    } else {
+      // Mock mode - accept any 6-digit OTP
+      console.log('🔄 Using mock OTP verification');
+      if (!otp || otp.length !== 6) {
+        const response: OTPVerifyResponse = {
+          success: false,
+          message: 'Invalid OTP format'
+        };
+        return res.status(400).json(response);
+      }
     }
 
-    if (otpRequest.verified) {
-      const response: OTPVerifyResponse = {
-        success: false,
-        message: 'OTP already used'
-      };
-      return res.status(400).json(response);
-    }
-
-    if (new Date() > new Date(otpRequest.expiresAt)) {
-      const response: OTPVerifyResponse = {
-        success: false,
-        message: 'OTP expired'
-      };
-      return res.status(400).json(response);
-    }
-
-    if (otpRequest.otp !== otp) {
-      const response: OTPVerifyResponse = {
-        success: false,
-        message: 'Invalid OTP'
-      };
-      return res.status(400).json(response);
-    }
-
-    // Mark OTP as verified
-    otpRequest.verified = true;
-    await otpRequest.save();
-
+    // Generate JWT token for staff login
     let token;
-    if (otpRequest.purpose === 'staff_login') {
-      // Generate JWT for staff
-      const staff = await HospitalStaff.findById(otpRequest.requestedBy) || 
+    if (mongoose.connection.readyState === 1 && otpRequest?.purpose === 'staff_login') {
+      const staff = await HospitalStaff.findById(otpRequest.requestedBy) ||
                    await InsuranceStaff.findById(otpRequest.requestedBy);
-      
+
       if (staff) {
         const userType = await HospitalStaff.findById(otpRequest.requestedBy) ? 'hospital' : 'insurance';
         token = jwt.sign(
-          { 
-            userId: staff._id, 
+          {
+            userId: staff._id,
             userType: userType + '_staff',
-            phone: staff.phone 
+            phone: staff.phone
           },
           JWT_SECRET,
           { expiresIn: '8h' }
         );
       }
+    } else if (mongoose.connection.readyState !== 1) {
+      // Mock token for development
+      token = jwt.sign(
+        {
+          userId: 'mock_staff_id',
+          userType: 'hospital_staff',
+          phone: '+91 9876543210'
+        },
+        JWT_SECRET,
+        { expiresIn: '8h' }
+      );
     }
 
-    // Log audit trail
-    const auditLog = new AuditLog({
-      action: `OTP Verified - ${otpRequest.purpose}`,
-      performedBy: otpRequest.requestedBy,
-      performedByType: otpRequest.purpose === 'patient_consent' ? 'hospital_staff' : 'patient',
-      patientId: otpRequest.patientId,
-      details: { purpose: otpRequest.purpose },
-      ipAddress: req.ip || 'unknown',
-      timestamp: new Date().toISOString()
-    });
-    await auditLog.save();
+    if (mongoose.connection.readyState === 1 && otpRequest) {
+      // Log audit trail
+      const auditLog = new AuditLog({
+        action: `OTP Verified - ${otpRequest.purpose}`,
+        performedBy: otpRequest.requestedBy,
+        performedByType: otpRequest.purpose === 'patient_consent' ? 'hospital_staff' : 'patient',
+        patientId: otpRequest.patientId,
+        details: { purpose: otpRequest.purpose },
+        ipAddress: req.ip || 'unknown',
+        timestamp: new Date().toISOString()
+      });
+      await auditLog.save();
+    }
 
     const response: OTPVerifyResponse = {
       success: true,
