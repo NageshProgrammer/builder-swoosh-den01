@@ -75,12 +75,8 @@ const HospitalStaffSchema = new Schema<HospitalStaffDocument>({
   timestamps: true
 });
 
-// Indexes
-HospitalSchema.index({ registrationNumber: 1 });
-HospitalSchema.index({ email: 1 });
-
+// Additional indexes (unique indexes are already created by schema definition)
 HospitalStaffSchema.index({ hospitalId: 1 });
-HospitalStaffSchema.index({ phone: 1 });
 HospitalStaffSchema.index({ role: 1 });
 HospitalStaffSchema.index({ isActive: 1 });
 
