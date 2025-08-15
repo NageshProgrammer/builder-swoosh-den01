@@ -346,6 +346,7 @@ const Index = () => {
                 <Link to="/contact" className="block text-white/80 hover:text-healthcare-primary transition-colors">Contact Support</Link>
                 <Link to="/docs" className="block text-white/80 hover:text-healthcare-primary transition-colors">Documentation</Link>
                 <Link to="/api" className="block text-white/80 hover:text-healthcare-primary transition-colors">API Reference</Link>
+                <Link to="/database-test" className="block text-white/80 hover:text-healthcare-primary transition-colors">Database Test</Link>
               </div>
             </div>
           </div>
