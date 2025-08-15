@@ -117,7 +117,6 @@ const BlockchainRecordSchema = new Schema<BlockchainRecordDocument>({
 
 // Indexes for performance
 OTPRequestSchema.index({ contact: 1, purpose: 1 });
-OTPRequestSchema.index({ expiresAt: 1 });
 OTPRequestSchema.index({ verified: 1 });
 
 AuditLogSchema.index({ performedBy: 1 });
@@ -126,7 +125,6 @@ AuditLogSchema.index({ timestamp: -1 });
 AuditLogSchema.index({ action: 1 });
 
 BlockchainRecordSchema.index({ patientId: 1 });
-BlockchainRecordSchema.index({ recordHash: 1 });
 BlockchainRecordSchema.index({ timestamp: -1 });
 BlockchainRecordSchema.index({ recordType: 1 });
 
