@@ -15,6 +15,7 @@ import PatientDashboard from "./pages/PatientDashboard";
 import HospitalDashboard from "./pages/HospitalDashboard";
 import InsuranceDashboard from "./pages/InsuranceDashboard";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import DatabaseTest from "./pages/DatabaseTest";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/help" element={<PlaceholderPage title="Help Center" />} />
           <Route path="/docs" element={<PlaceholderPage title="Documentation" />} />
           <Route path="/api" element={<PlaceholderPage title="API Reference" />} />
+          <Route path="/database-test" element={<DatabaseTest />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
